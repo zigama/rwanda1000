@@ -1,0 +1,54 @@
+{% load pagination-tags %}
+
+
+
+<table width="100%"> 
+    <thead>
+	<tr><th colspan = "6"><a href={{request.url}}?csv{%if postqn%}&{{postqn}}{%endif%}></a></th><th colspan = "2"><a href={{request.url}}?excel{%if postqn%}&{{postqn}}{%endif%}>Export To EXCEL</a></th><th colspan = "2"></th></tr>
+        <tr>
+            <th>Child ID</th>
+            <th>Date of Birth</th>
+	    <th>Child Number</th>
+            <th>Gender</th>
+	    <th>Weight</th>
+            <!--<th>STATUS</th>-->
+            <th>Mother</th>
+	    <th>Reporter</th>
+            <th>Health Centre</th>
+	    <th>District</th>
+	    <th>Province</th>
+        </tr>
+    </thead>
+    <tbody>
+    	{% for report in records.object_list %}
+            <tr>
+            	<td> <div name = 'chart' class = 'popup' id='{{report.child.id}}' ><a name ='{{report.child.id}}' id='popupBoxClose' onclick = hideMe(this.name) >Close</a><div style="float: left;"><div id="chart"></div></div> <div style="float: left;"><div id="history"></div></div></div>
+
+<a href="#" onclick='showPopup("{{report.child.id}}")'>{{report.child.id}}</a></td>
+                <td>{{report.date_of_birth|date:"d.m.Y"}}</td>
+                <td>{{report.child_number}}</td>
+                <td>{{report.child.valid_gender}}</td>
+		<td>{{report.weight}}</td>
+		<!--<td>{{report.child.status}}</td>-->
+		<td><a href="/ubuzima/patient/{{report.mother.pk}}?{%if postqn%}&{{postqn}}{%endif%}">{{report.mother}}</a></td>
+                <td>{{report.chw.telephone_moh}}</td>
+		<td>{{report.health_centre}}</td>
+		<td>{{report.district}}</td>
+		<td>{{report.province}}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    
+    <tfoot>
+			<tr>
+				<td colspan="12">
+					{% paginator records %}
+				</td>
+			</tr>
+			<tr>
+				<td colspan="12">
+				Matching Nutrition Reports: {{ records.paginator.count }}
+				</td>
+			</tr>
+	</tfoot>
+</table>

@@ -1,0 +1,13 @@
+.project
+mysql2pgsql.yml
+*~
+settings.py
+*.pyc
+*.log
+*.old
+*.json
+*.xls
+*.xlsx
+*.sql
+*.pem
+*_old

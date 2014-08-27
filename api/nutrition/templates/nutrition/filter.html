@@ -1,0 +1,55 @@
+{% block stylesheets %}
+<link type="text/css" rel="stylesheet" href="/static/webapp/javascripts/calendar/dhtmlgoodies_calendar.css"></link>
+<link rel="stylesheet" type="text/css"  href="/static/webapp/stylesheets/stats.css" />
+{% endblock %}
+{% block javascripts %}
+<script type="text/javascript" src="/static/webapp/javascripts/stats.js"></script>
+<script type="text/javascript" src="/static/webapp/javascripts/calendar/dhtmlgoodies_calendar.js"></script>
+{% endblock %}
+
+
+{% block content %}
+
+<div style="clear:both;">
+
+<div>
+    <form class="topstrip">
+        <h2>Filtering</h2>
+        <table width="100%">
+            <thead>
+                <tr><th colspan="2">Period</th><th>Location</th><th></th><th></th><th></th><th></th></tr>
+                <tr><th>Start</th><th>End</th><th>Province</th><th>District</th><th>Health
+                        Centre</th><th></th><th></th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+            <input style="background-color: white"  type="text" id="pickstartdate" value="{{ start_date }}"  name="start_date" 	readonly="readonly"  onFocus="displayCalendar(form.start_date,'dd.mm.yyyy',this)" size = "10"/></td>
+        <td><input style="background-color: white" type="text" id="pickenddate" value="{{ end_date }}"  name="end_date" readonly="readonly"  onFocus="displayCalendar(form.end_date,'dd.mm.yyyy',this)" size = "10" />
+                    </td>
+                    <td>
+            <select name="province" id="provchoose"><option></option>
+                {%  for loc in filters.province %}<option value="{{ loc.id }}" {% if loc.selected and request.GET.province %} selected="selected"{% endif %}>{{ loc.name }}</option>{%  endfor %}
+            </select>
+                    </td>
+                    <td>
+            <select name="district" id="distchoose"><option></option>
+                {%  for loc in filters.district %}<option value="{{ loc.id }}"{% if loc.selected and request.GET.district %} selected="selected"{% endif %}>{{ loc.name }}</option>{%  endfor %}
+            </select>
+                    </td>
+                    <td>
+            <select name="location" id="locchoose"><option></option>
+                {%  for loc in filters.location %}<option value="{{ loc.id }}"{% if loc.selected and request.GET.location %} selected="selected"{% endif %}>{{ loc.name }}</option>{%  endfor %}
+            </select>
+                    </td>
+                    <td>
+            <input type="button" value="Update Filters"  onClick="return deroulement(this.form);"/>
+                    </td><td></td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+    <div class="clear-hack"></div>
+</div>
+{% endblock %}
+

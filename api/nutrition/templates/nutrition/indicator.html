@@ -1,0 +1,158 @@
+{% extends request.base_template %}
+{% block title %}Nutrition - {{data.desc}}{% endblock %}
+
+{% block javascripts %}
+
+<script type="text/javascript" src="/static/webapp/extjs/ext-all-debug.js"></script>
+<script src="/static/webapp/javascripts/d3.min.js"></script>
+  <script src="/static/webapp/javascripts/underscore-min.js"></script>
+  <script src="/static/webapp/javascripts/growthchart.js"></script>
+  <link rel="stylesheet" type="text/css" href="/static/webapp/stylesheets/growthchart.css" ></link>
+
+<style type="text/css">
+  .popup {
+   display:none; /* Hide the DIV */
+    position:fixed;  
+    _position:absolute; /* hack for internet explorer 6 */  
+    height:400px;  
+    width:600px;  
+    background:#FFFFFF;  
+    left: 300px;
+    top: 150px;
+    z-index:100; /* Layering ( on-top of others), if you have lots of layers: I just maximized, you can change it yourself */
+    margin-left: 15px;  
+   
+    /* additional features, can be omitted */
+    border:2px solid #3a499e;      
+    padding:15px;  
+    font-size:15px;  
+    -moz-box-shadow: 0 0 5px #3a499e;
+    -webkit-box-shadow: 0 0 5px #d7d7d7;
+    box-shadow: 0 0 5px #3a499e;
+	  }
+	  
+	  a{ 
+cursor: pointer; 
+text-decoration:none; 
+}
+
+/* This is for the positioning of the Close Link */
+#popupBoxClose {
+    font-size:20px;  
+    line-height:15px;  
+    right:5px;  
+    top:5px;  
+    position:absolute;  
+    color:#6fa5e2;  
+    font-weight:500;      
+}
+</style>
+
+<script language="javascript">
+
+$('#popupBoxClose').click( function() {           
+            $('#container').fadeOut("slow");
+        });
+
+function hideMe(id){
+var popup = document.getElementById(id);
+	
+    popup.style.display = 'none';
+}
+
+function showPopup(id) {
+	
+    var popup = document.getElementById(id);
+	
+    popup.style.display = 'block';
+
+    var url = '/nutrition/child/'+id;
+
+	$.getJSON(
+          url,
+          function(data){
+
+              //alert(data.records[0].id);
+
+              
+
+   var myConfig = {
+			height: 275,
+			titles: false,
+			wfa_all_0_to_5_meta: {
+				"lines": [{
+					"tag":"SD0",
+					"name":""
+				}, {
+					"tag":"SD1neg",
+					"name":"-1 SD"
+				}, {
+					"tag":"SD2neg",
+					"name":"-2 SD"
+				}, {
+					"tag":"SD2",
+					"name":" 2 SD"
+				}, {
+					"tag":"SD1",
+					"name":" 1 SD"
+				}, {
+					"tag":"SD3",
+					"name":" 3 SD"
+				}, {
+					"tag":"SD3neg",
+					"name":"-3 SD"
+				}],}
+		};
+	
+	var chartData = data.records[0].history;//selectedRecord[0].data.history;
+	var grownthChart = display_growth_chart(chartData, popup, "wfa_boys_0_to_5", myConfig);
+	
+	//var adddivAll = document.getElementById("history");
+	//var historyData = data.records[0].details;
+	//adddivAll.innerHTML = showData(historyData);
+
+	});
+  }
+
+function showData(data){
+		
+		var str;
+
+		   str = "<table width='400' border='0' cellspacing='0' cellpadding='0' align='left'>";
+
+		   str += "<tr><th width='55'>AGE(Months)</th><th width='80'>WEIGHT</th><th width='80'>HEIGHT</th><th width='80'>MUAC</th></tr>";
+
+		   for (i = 0; i < data.length; i++) {
+		       str += "<tr><td width='55'>" +data[i].age_in_months + "</td><td width='85'>" + data[i].weight + "</td><td width='85'>" + (data[i].height ? data[i].height : " ") + "</td><td width='85'>" + (data[i].muac ? data[i].muac : " ") + "</td></tr>";
+		   }
+
+		   str += "</table>";
+		
+		return str;
+	}
+
+
+
+
+</script>
+
+
+{% endblock %}
+
+{% block content %}
+
+<h2>{{data.desc}}, &nbsp;{{filters.period.start|date:"d/M/Y"}} - {{filters.period.end|date:"d/M/Y"}}</h2>
+
+{% ifequal type "CBN" %}
+{% include 'nutrition/cbn_report.html' %}
+{%endifequal%}
+
+{% ifequal type "BIRTH" %}
+{% include 'nutrition/birth_report.html' %}
+{%endifequal%}
+
+{% ifequal type "PREGNANCY" %}
+{% include 'nutrition/pregnancy_report.html' %}
+{%endifequal%}
+
+{% endblock %}

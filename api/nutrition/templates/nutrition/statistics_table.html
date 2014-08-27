@@ -1,0 +1,50 @@
+
+{% block stylesheets %}
+
+<link rel="stylesheet" type="text/css" href="/static/webapp/extjs/resources/css/ext-all.css" />
+
+<style type="text/css">
+
+/**OVERRIDE style.css table style reset values to 0 **/
+
+table
+{ margin: 0px 0 0px 0;}
+
+table tr th, table tr td
+{ /*background: #3B3B3B;
+  background: #74D7E3;*/
+  color: #333;
+  padding: 0px 0px;
+  text-align: left;}
+  
+table tr td
+{ background: #F0EFE2;
+  color: #47433F;
+  border-top: 0px solid #FFF;}
+
+/** OVERRIDE module.css table style reset values to 0 **/
+
+body:last-child td            { padding-right: 0; }
+			body:last-child td:last-child { padding-right: 0; }
+
+</style>
+{% endblock %}
+{% block javascripts %}
+
+<!-- START ExtJS -->
+<script type="text/javascript" src="/static/webapp/extjs/ext-all-debug.js"></script>
+
+<script type="text/javascript" src="/static/nutrition/javascripts/statistics.js"></script>
+
+<!-- END ExtJS -->
+
+
+{% endblock %}
+{% block content %}
+
+<div id="statistics">
+
+</div>
+
+
+{% endblock %}

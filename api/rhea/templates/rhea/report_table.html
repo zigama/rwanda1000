@@ -1,0 +1,86 @@
+{% load pagination-tags %}
+
+<table width="100%"> 
+	<thead>
+		<tr>
+		    <th>NO</th>
+		    <th>District Name</th>
+		    <th>Birth Passed in HIE</th>
+		    <th>Death Passed in HIE</th>
+                    <th>Risk Passed in HIE</th>
+		    <th>Birth Failed in HIE</th>
+		    <th>Death Failed in HIE</th>
+                    <th>Risk Failed in HIE</th>
+		    <th>Total Failed in HIE</th>
+		    <th>Total Passed in HIE</th>
+		    <th>Total Birth</th>
+		    <th>Total Death</th>
+                    <th>Total Risk</th>		    
+		    <th>Total</th>
+		    
+		    
+		</tr>
+	</thead>
+
+	<tbody>
+    	{% for data in notifications_by_district %}
+            <tr>
+            	<td>{{data.id}}</td>
+                <td>{{data.notification__report__district__name}}</td>
+		<td>{{data.birth_passed}}</td>
+		<td>{{data.death_passed}}</td>
+                <td>{{data.risk_passed}}</td>
+		<td>{{data.birth_failed}}</td>
+		<td>{{data.death_failed}}</td>
+                <td>{{data.risk_failed}}</td>
+		<td>{{data.passed}}</td>
+		<td>{{data.failed}}</td>
+		<td>{{data.birth}}</td>
+		<td>{{data.death}}</td>
+                <td>{{data.risk}}</td>
+                <td>{{data.total}}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    
+</table>
+
+<table width="100%"> 
+    <thead>
+        <tr>
+        	<th>Id</th>
+            <th>Date</th>
+            <th>Location</th>
+            <th>Type</th>
+            <th>Reporter</th>
+            <th>Patient</th>
+            <th>Message</th>
+        </tr>
+    </thead>
+    <tbody>
+    	{% for notification in notifications.object_list %}
+            <tr>
+            	<td {%if notification.is_risky %} class="lagging"{%endif%}><a href="/ubuzima/report/{{notification.notification.report.pk}}">{{notification.pk}}</a></td>
+                <td>{{notification.notification.created|date:"d.m.Y"}}</td>
+                <td>{{notification.notification.report.location.name}}</td>
+                <td>{{notification.notification.report.type.name}}</td>
+                <td>{{notification.notification.report.reporter.telephone_moh}}</td>
+                <td><a href="/ubuzima/patient/{{notification.notification.report.patient.pk}}">{{notification.notification.report.patient.national_id}}</a></td>
+                <td>{{notification.notification.report.summary}}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    
+    <tfoot>
+			<tr>
+				<td colspan="10">
+					{% paginator notifications %}
+				</td>
+			</tr>
+			<tr>
+				<td colspan="10">
+				Matching Notifications: {{ notifications.paginator.count }}
+				</td>
+			</tr>
+	</tfoot>
+</table>

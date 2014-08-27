@@ -1,0 +1,50 @@
+{% load pagination-tags %}
+
+
+
+<table width="100%"> 
+    <thead>
+	<tr><th colspan = "6"><a href={{request.url}}?csv{%if postqn%}&{{postqn}}{%endif%}></a></th><th colspan = "2"><a href={{request.url}}?excel{%if postqn%}&{{postqn}}{%endif%}>Export To EXCEL</a></th><th colspan = "2"></th></tr>
+        <tr>
+            <th>National ID</th>
+            <th>Last Mestrual Period</th>
+	    <th>Expected Delivery Date</th>
+            <th>Weight</th>
+            <th>Height</th>
+	    <th>BMI ANC1</th>
+            <th>Reporter</th>
+            <th>Health Centre</th>
+	    <th>District</th>
+	    <th>Province</th>
+        </tr>
+    </thead>
+    <tbody>
+    	{% for report in records.object_list %}
+            <tr>
+            	<td><a href="/ubuzima/patient/{{report.woman.pk}}?{%if postqn%}&{{postqn}}{%endif%}">{{report.woman.id}}</a></td>
+                <td>{{report.last_menstrual_period|date:"d.m.Y"}}</td>
+                <td>{{report.expected_delivery_date|date:"d.m.Y"}}</td>
+                <td>{{report.weight}}</td>
+		<td>{{report.height}}</td>
+		<td>{{report.bmi_anc1}}</td>
+		<td>{{report.chw.telephone_moh}}</td>
+		<td>{{report.health_centre}}</td>
+		<td>{{report.district}}</td>
+		<td>{{report.province}}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    
+    <tfoot>
+			<tr>
+				<td colspan="16">
+					{% paginator records %}
+				</td>
+			</tr>
+			<tr>
+				<td colspan="16">
+				Matching Nutrition Reports: {{ records.paginator.count }}
+				</td>
+			</tr>
+	</tfoot>
+</table>

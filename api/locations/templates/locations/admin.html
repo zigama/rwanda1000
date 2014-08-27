@@ -1,0 +1,96 @@
+{% extends request.base_template %}
+{% block title %}Location Administration{% endblock %}
+
+{% block javascripts %}
+{% endblock %}
+
+{% block content %}
+<div>
+	<h1> List of Location Types</h1>
+	<table width="100%">
+		<thead>
+		<tr>
+			<th>Type Name</th><th>Short Name</th> <th>Created On</th><th>Option</th>
+		</tr>
+		</thead>
+		
+		<tbody>
+
+		{%for lt in loc_types%}
+			<tr>
+				
+					<td>
+					
+						<label>{{lt.name}}</label> 
+					
+					</td>
+					<td>
+					
+						<label>{{lt.short_name}}</label> 
+					
+					</td>
+					<td>
+					
+						<label>{{lt.created}}</label> 
+					
+					</td>
+					<td>
+						<a href="/admin/locations/{{lt.name.lower.split|join:""}}/add"><img src="/static/locations/images/new.png" /></a>
+					</td>
+				
+				
+			</tr>
+		{%endfor%}
+		
+		</tbody>
+
+	</table>
+</di>
+
+<div>
+<h1>Add Location Type</h1>
+<font color="red">{{error}}</font>
+<form method="post" >
+	{% csrf_token %}
+	<table width="50%">
+		<tr>
+			<td> <label>Name</label></td>  <td>	<input type="text" name="name" /> </td>	
+		</tr>
+		<tr>
+			<td> <label>Short Name</label></td>  <td>	<input type="text" name="short_name" /> </td>	
+		</tr>
+		<tr>
+			<td> <label>International Phone Code</label></td>  <td>	<input type="text" name="phone_code" /> </td>	
+		</tr>
+		<tr>
+			<td> <label>Phone Number Length</label></td>  <td>	<input type="text" name="phone_l" /> </td>	
+		</tr>
+		<tr>
+			<td> <label>Maximum Length of Location Name</label></td>  <td>	<input type="text" name="max_name_l" /> </td>	
+		</tr>
+		<tr>
+			<td> <label>Maximum Length of Location Code</label></td>  <td>	<input type="text" name="max_code_l" /> </td>	
+		</tr>
+		<tr>
+			<td> <label>Has SubType</label></td>  <td>	<input type="checkbox" name="subtype" /> </td>	
+		</tr>
+	
+	<tr>
+		<td colspan="2"><h4>Link Your Location With Others Where Necessary</h4></td>
+	</tr>
+	{%if loc_types%}
+		{%for lt in loc_types%}
+		<tr>
+			<td><input type="checkbox" name="locs"  value="{{lt.name}}"/></td> <td><label>{{lt.name}}</label></td>
+		</tr>
+		{%endfor%}
+	{%endif%}
+			
+	<tr>
+		<td><img src="/static/locations/images/attention.jpeg" width="40px" /> <label>First Migrate Your Location Data</label> </td>
+		<td><input type="submit" value="Add" /></td>
+	</tr>
+	</table>
+</form>
+</div>
+{% endblock %}

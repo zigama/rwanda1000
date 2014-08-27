@@ -1,0 +1,20 @@
+{% extends request.base_template %}
+{% block title %}Nutrition -Child{% endblock %}
+
+{% block javascripts %}
+<script src="/static/webapp/javascripts/d3.min.js"></script>
+  <script src="/static/webapp/javascripts/underscore-min.js"></script>
+  <script src="/static/webapp/javascripts/growthchart.js"></script>
+  <link rel="stylesheet" type="text/css" href="/static/webapp/stylesheets/growthchart.css" ></link>
+
+
+{% endblock %}
+
+{% block content %}
+
+{% include 'nutrition/child.html' %}
+
+{% endblock %}
+
+
+
