@@ -134,13 +134,13 @@ def check_sms_report_semantics( sms_report, positioned_sms , DEFAULT_LANGUAGE_IS
                     if field.exists():
                         report.update({'%s' % value: validate_field(sms_report, field[0], value, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)})
                     else:
-                        report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, 
+                        report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None,
                                                                message_type = 'unknown_field_code', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value)
             else:
                 if len(value.split(sms_report.field_separator)) > 1:
                     for value in value.split(sms_report.field_separator):
                         if value.lower()  != key.lower():
-                            report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, 
+                            report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None,
                                                                message_type = 'unknown_field_code', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value)
                         else:
                             field = SMSReportField.objects.get(sms_report = sms_report, position_after_sms_keyword = pos, key = key)
@@ -150,11 +150,11 @@ def check_sms_report_semantics( sms_report, positioned_sms , DEFAULT_LANGUAGE_IS
                         field = SMSReportField.objects.get(sms_report = sms_report, position_after_sms_keyword = pos, key = key)
                         report.update({'%s' % key: validate_field(sms_report, field, value, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)})
                     else:
-                        report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, 
+                        report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None,
                                                                message_type = 'unknown_field_code', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value)
         except Exception, e:
-            print e, DEFAULT_LANGUAGE_ISO
-            report['error'] += ' %s' % e
+            #print e, DEFAULT_LANGUAGE_ISO
+            report['error'] += '%s, ' % e.message
 
     ## Check for dependencies
     parse_dependencies(sms_report, report, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
@@ -186,10 +186,18 @@ def validate_field(sms_report, field, value, DEFAULT_LANGUAGE_ISO ):
         value = parse_date(sms_report, field, value, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
 
     elif field.type_of_value == 'integer':
-        value = parse_value(sms_report, field, int(value), DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
+        try:
+            value = parse_value(sms_report, field, int(value), DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
+        except Exception, e:
+            raise Exception( ' %s (%s)' % (get_appropriate_response( sms_report = sms_report, sms_report_field = field,
+                                             message_type = 'only_integer', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
 
     elif field.type_of_value == 'float':
-        value = parse_value(sms_report, field, float(value), DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
+        try:
+            value = parse_value(sms_report, field, float(value), DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
+        except Exception, e:
+            raise Exception( ' %s (%s)' % (get_appropriate_response( sms_report = sms_report, sms_report_field = field,
+                                             message_type = 'only_float', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
 
     return value
         
@@ -201,7 +209,7 @@ def parse_length(sms_report, field, value, DEFAULT_LANGUAGE_ISO ):
         if response.exists():
             raise Exception( getattr(response[0], 'message_%s' % DEFAULT_LANGUAGE_ISO) )
         else:
-            raise Exception( '%s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
+            raise Exception( ' %s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
 
 def parse_value(sms_report, field, value, DEFAULT_LANGUAGE_ISO ):
     if field.minimum_value <= value <= field.maximum_value:
@@ -211,7 +219,7 @@ def parse_value(sms_report, field, value, DEFAULT_LANGUAGE_ISO ):
         if response.exists():
             raise Exception( getattr(response[0], 'message_%s' % DEFAULT_LANGUAGE_ISO) )
         else:
-            raise Exception( '%s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
+            raise Exception( ' %s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
 
 def parse_date(sms_report, field, value, DEFAULT_LANGUAGE_ISO):
 
@@ -230,14 +238,14 @@ def parse_date(sms_report, field, value, DEFAULT_LANGUAGE_ISO):
             if response.exists():
                 raise Exception( getattr(response[0], 'message_%s' % DEFAULT_LANGUAGE_ISO) )
             else:
-                raise Exception( '%s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
+                raise Exception( ' %s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
         
     else:
         response = SMSMessage.objects.filter(sms_report = sms_report, sms_report_field = field, message_type = 'only_date')
         if response.exists():
             raise Exception( getattr(response[0], 'message_%s' % DEFAULT_LANGUAGE_ISO) )
         else:
-            raise Exception( '%s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
+            raise Exception( ' %s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value ) )
 
 def parse_dependencies(sms_report, report, DEFAULT_LANGUAGE_ISO ):
 
@@ -308,7 +316,7 @@ def parse_only_one(sms_report, report, DEFAULT_LANGUAGE_ISO ):
             for f in field:
                 if f.position_after_sms_keyword in seens.keys():
                     seens[f.position_after_sms_keyword] += ' %s' % r
-                    report['error'] += ', %s (%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
+                    report['error'] += ' %s (%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
                                                    message_type = 'one_value_of_list', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), seens[f.position_after_sms_keyword])
                     
                 else:
@@ -328,7 +336,7 @@ def parse_missing(sms_report, report, DEFAULT_LANGUAGE_ISO ):
             if f.dependency == 'jam' and f.depends_on_value_of.key in report.keys():   continue
             elif gots.filter( position_after_sms_keyword = f.position_after_sms_keyword ).exists():   continue
             else: 
-                report['error'] += ', %s (%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
+                report['error'] += '%s (%s), -' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
                                            message_type = 'missing_sms_report_field', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), f.key)
             
     return True
@@ -341,7 +349,17 @@ def get_error_msg(sms_report , sms_report_field , DEFAULT_LANGUAGE_ISO , message
     if response.exists():
         return getattr(response[0], 'message_%s' % DEFAULT_LANGUAGE_ISO)
     else:
-        return '%s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), sms_report_field.key)
+        if sms_report_field:    return ' %s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), sms_report_field.key)
+        return ' %s' % get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
+
+def locate_object(object_inst, ref):
+    for l in LocationType.objects.all():
+        setattr(    object_inst, 
+                    camel_to_underscore_lower(l.name), 
+                    getattr(ref, camel_to_underscore_lower(l.name))
+                )
+    return object_inst
+    
 
 
 def import_sms_report(filepath = "rapidsmsrw1000/apps/api/messaging/smsreport.xls", sheetname = "smsreport"):
@@ -376,6 +394,84 @@ def import_sms_report(filepath = "rapidsmsrw1000/apps/api/messaging/smsreport.xl
             print "\ntitle : %s\n keyword : %s\n description : %s\n field_separator : %s\n in_use : %s\n case_sensitive: %s\n syntax_regex : %s\n \
                     created: %s \n" % (sms_report.title, sms_report.keyword, sms_report.description, sms_report.field_separator, sms_report.in_use, 
                         sms_report.case_sensitive, sms_report.syntax_regex, sms_report.created)
+            
+        except Exception, e:
+            print e, row_index
+            pass
+
+def import_sms_report_field(filepath = "rapidsmsrw1000/apps/api/messaging/smsreportfield.xls", sheetname = "smsreportfield"):
+    book = open_workbook(filepath)
+    sheet = book.sheet_by_name(sheetname)
+    
+    for row_index in range(sheet.nrows):
+        if row_index < 1: continue   
+        try:
+            sms_report_keyword          = sheet.cell(row_index, 0).value 
+            prefix                      = sheet.cell(row_index, 1).value
+            key                         = sheet.cell(row_index, 2).value 
+            description                 = sheet.cell(row_index, 3).value 
+            type_of_value               = sheet.cell(row_index, 4).value 
+            upper_case                  = sheet.cell(row_index, 5).value 
+            lower_case                  = sheet.cell(row_index, 6).value 
+            try:    minimum_value               = int( sheet.cell(row_index, 7).value )
+            except Exception, e: minimum_value = None
+            try:    maximum_value               = int( sheet.cell(row_index, 8).value )
+            except Exception, e: maximum_value = None
+            try:    minimum_length              = int( sheet.cell(row_index, 9).value )
+            except Exception, e: minimum_length = None
+            try:    maximum_length              = int( sheet.cell(row_index, 10).value )
+            except Exception, e: maximum_length = None 
+            try:    position_after_sms_keyword  = int( sheet.cell(row_index, 11).value )
+            except Exception, e: position_after_sms_keyword = None 
+            depends_on_value_of         = sheet.cell(row_index, 12).value 
+            dependency                  = sheet.cell(row_index, 13).value 
+            allowed_value_list          = sheet.cell(row_index, 14).value 
+            only_allow_one              = sheet.cell(row_index, 15).value 
+            required                    = sheet.cell(row_index, 16).value 
+            
+            #print sms_report_keyword, prefix, key, description, type_of_value, upper_case, lower_case, minimum_value, maximum_value,\
+            #        minimum_length, maximum_length, position_after_sms_keyword, depends_on_value_of, dependency, allowed_value_list, only_allow_one, required
+            
+            sms_report                                   = SMSReport.objects.get(keyword = sms_report_keyword)
+            try:    dep                                  = SMSReportField.objects.get(key = depends_on_value_of)
+            except Exception, e:    dep                  = None
+            sms_report_field, created                    = SMSReportField.objects.get_or_create(key = key, sms_report = sms_report, 
+                                                                                                    position_after_sms_keyword = position_after_sms_keyword)
+            sms_report_field.prefix                      = prefix
+            sms_report_field.description                 = description
+            sms_report_field.type_of_value               = type_of_value
+            sms_report_field.upper_case                  = upper_case
+            sms_report_field.lower_case                  = lower_case
+            sms_report_field.minimum_value               = minimum_value
+            sms_report_field.maximum_value               = maximum_value
+            sms_report_field.minimum_length              = minimum_length
+            sms_report_field.maximum_length              = maximum_length
+            sms_report_field.depends_on_value_of         = dep
+            sms_report_field.dependency                  = dependency
+            sms_report_field.allowed_value_list          = allowed_value_list
+            sms_report_field.only_allow_one              = only_allow_one
+            sms_report_field.required                    = required
+            print sms_report_field, minimum_value, maximum_value, minimum_length, maximum_length, position_after_sms_keyword
+            sms_report_field.save()                   
+            
+            print   sms_report_field.sms_report                  ,\
+                    sms_report_field.prefix                      ,\
+                    sms_report_field.key                         ,\
+                    sms_report_field.description                 ,\
+                    sms_report_field.type_of_value               ,\
+                    sms_report_field.upper_case                  ,\
+                    sms_report_field.lower_case                  ,\
+                    sms_report_field.minimum_value               ,\
+                    sms_report_field.maximum_value               ,\
+                    sms_report_field.minimum_length              ,\
+                    sms_report_field.maximum_length              ,\
+                    sms_report_field.position_after_sms_keyword  ,\
+                    sms_report_field.depends_on_value_of         ,\
+                    sms_report_field.dependency                  ,\
+                    sms_report_field.allowed_value_list          ,\
+                    sms_report_field.only_allow_one              ,\
+                    sms_report_field.required                    
+
             
         except Exception, e:
             print e, row_index

@@ -236,6 +236,10 @@ class SMSMessage(models.Model):
     
 ##End of SMSMessage
 
+##Start of SMSReportTrack
+
+##End of SMSReportTrack
+
 
 def ensure_new_language(sender, **kwargs):
     if kwargs.get('created', False):

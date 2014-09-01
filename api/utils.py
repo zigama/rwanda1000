@@ -204,6 +204,9 @@ export_model_as_csv.short_description = _('Export to CSV')
 def export_model_as_excel(modeladmin, request, queryset):
     has_name_fields = ['village', 'cell', 'sector', 'health_centre', 'referral_hospital', 'district', 'province','role', 'nation']
     is_date_fields = ['date_of_birth', 'dob', 'join_date']
+    has_keys = ['sms_report_field', 'depends_on_value_of']
+    has_keyword = ['sms_report']  
+    is_datetime_fields = ['created']
     workbook = xlwt.Workbook()
     sheet_name = "%s" % ( queryset.model.__name__.lower(), )
     sheet = workbook.add_sheet(sheet_name)
@@ -231,7 +234,11 @@ def export_model_as_excel(modeladmin, request, queryset):
 
             try:
                 if field in has_name_fields:  sheet.write(row, col, value.name)
+                elif field in has_keys: sheet.write(row, col, "%s" % (value.key))
+                elif field in has_keyword: sheet.write(row, col, "%s" % (value.keyword))
                 elif field in is_date_fields: sheet.write(row, col, "%d/%d/%d" % (value.day, value.month, value.year))
+                elif field in is_datetime_fields: sheet.write(row, col, "%d/%d/%d %d:%d:%d" % (value.day, value.month, value.year,
+                                                                                            value.hour, value.minute, value.second))
                 else:   sheet.write(row, col, value)
             except Exception, e:
                 try:    sheet.write(row, col, value)
