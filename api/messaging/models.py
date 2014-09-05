@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 from rapidsmsrw1000.apps.api.utils import *
 from django.contrib.auth.models import Group
 
+
 ##Start of SMSReport
 class SMSReport(models.Model):
 
@@ -32,8 +33,15 @@ class SMSReport(models.Model):
 
 
     ### This has to be recognized in the language supported
-    title = models.CharField(max_length=50,
-                            help_text="Name your SMS Report.")
+        
+    ##START OF SMSReport LANGUAGES
+    
+    title_en = models.TextField(null = True, blank = True, help_text = 'Title in English ')
+
+
+    title_rw = models.TextField(null = True, blank = True, help_text = 'Title in Kinyarwanda ')
+    ##END OF SMSReport LANGUAGES
+    
     keyword = models.CharField(max_length=30, unique=True)
 
     description =  models.TextField(max_length=255,
@@ -72,7 +80,7 @@ class SMSReport(models.Model):
     
     
     def __unicode__(self):
-        return "%s" % self.title
+        return "%s" % self.keyword
 
 
 ##End of SMSReport
@@ -101,6 +109,18 @@ class SMSReportField(models.Model):
                          )
     
     sms_report = models.ForeignKey(SMSReport)
+
+    ##START OF SMSReportField LANGUAGES
+    
+    title_en = models.TextField(null = True, blank = True, help_text = 'Title in English ')
+
+    category_en = models.TextField(null = True, blank = True, help_text = 'Category in English ')
+    
+
+    title_rw = models.TextField(null = True, blank = True, help_text = 'Title in Kinyarwanda ')
+
+    category_rw = models.TextField(null = True, blank = True, help_text = 'Category in Kinyarwanda ')
+    ##END OF SMSReportField LANGUAGES
     
     prefix = models.CharField(max_length=5, null=True, blank=True,
                                       help_text="Do You prefix this field? E.G: WT50.8")
@@ -216,16 +236,13 @@ class SMSMessage(models.Model):
     description = models.TextField(null = True, blank = True, help_text = 'Why This SMS, Have you check none is similar?')
     #Reminder to user_group, of patient, base on sms report table, time column , after  x seconds, y minutes, z hour , m days, n months, p year
     
-    ##START OF LANGUAGES
-    
-    message_en = models.TextField(max_length=255, null=True, blank=True, help_text="Message in English")
-    message_rw = models.TextField(max_length=255, null=True, blank=True, help_text="Message in Kinyarwanda")
+    ##START OF SMSMessage LANGUAGES
 
-    message_fr = models.TextField(null = True, blank = True, help_text = 'Message in Francais ')
+    message_en = models.TextField(null = True, blank = True, help_text = 'Message in English ')
+        
 
-    message_ch = models.TextField(null = True, blank = True, help_text = 'Message in Chinese ')
-    
-    ##END OF LANGUAGES
+    message_rw = models.TextField(null = True, blank = True, help_text = 'Message in Kinyarwanda ')
+    ##END OF SMSMessage LANGUAGES
     
     created = models.DateTimeField(auto_now_add=True)
 
@@ -237,6 +254,7 @@ class SMSMessage(models.Model):
 ##End of SMSMessage
 
 ##Start of SMSReportTrack
+##all report_keys ; all_distinct_report_fields; all_locations_type; all_message_types; reporter; created
 
 ##End of SMSReportTrack
 
@@ -250,8 +268,17 @@ def ensure_new_language(sender, **kwargs):
         help_text = "Message in %s " % language.name
         model_object = get_model_object(language._meta.app_label, "SMSMessage" )
         filename = '%s/%s/models.py' % (API_PATH, model_object._meta.app_label)
-        lang_c = add_column_textfield_to_table(filename, model_object, field_name,  marker, help_text)
-        if lang_c:    return True
+        lang_c = add_column_textfield_to_table(filename, model_object, field_name,  '%s %s' % ( model_object._meta.object_name, marker ), help_text)
+        field_name1 = 'title_%s' % language.iso_639_1_code
+        help_text1 = "Title in %s " % language.name
+        model_object1 = get_model_object(language._meta.app_label, "SMSReport" )
+        lang_c1 = add_column_textfield_to_table(filename, model_object1, field_name1,  '%s %s' % ( model_object1._meta.object_name, marker ), help_text1)
+        model_object2 = get_model_object(language._meta.app_label, "SMSReportField" )
+        lang_c2 = add_column_textfield_to_table(filename, model_object2, field_name1,  '%s %s' % ( model_object2._meta.object_name, marker ), help_text1)
+        field_name2 = 'category_%s' % language.iso_639_1_code
+        help_text2 = "Category in %s " % language.name
+        lang_c3 = add_column_textfield_to_table(filename, model_object2, field_name2,  '%s %s' % ( model_object2._meta.object_name, marker ), help_text2)
+        if lang_c and lang_c1 and lang_c2 and lang_c3:    return True
         else:   return False
     
  

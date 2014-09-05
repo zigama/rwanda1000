@@ -143,12 +143,18 @@ def check_sms_report_semantics( sms_report, positioned_sms , DEFAULT_LANGUAGE_IS
                             report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None,
                                                                message_type = 'unknown_field_code', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value)
                         else:
-                            field = SMSReportField.objects.get(sms_report = sms_report, position_after_sms_keyword = pos, key = key)
-                            report.update({'%s' % key: validate_field(sms_report, field, value, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)})
+                            field = SMSReportField.objects.filter(sms_report = sms_report, position_after_sms_keyword = pos, key = key)
+                            if field.exists():  report.update({'%s' % key: validate_field(sms_report, field[0], value, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)})
+                            else:
+                                report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None,
+                                                                       message_type = 'unknown_field_code', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value)
                 else:
                     if key:                        
-                        field = SMSReportField.objects.get(sms_report = sms_report, position_after_sms_keyword = pos, key = key)
-                        report.update({'%s' % key: validate_field(sms_report, field, value, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)})
+                        field = SMSReportField.objects.filter(sms_report = sms_report, position_after_sms_keyword = pos, key = key)
+                        if field.exists():  report.update({'%s' % key: validate_field(sms_report, field[0], value, DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)})
+                        else:
+                            report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None,
+                                                                   message_type = 'unknown_field_code', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value)
                     else:
                         report['error'] += ', %s(%s)' % (get_error_msg(sms_report = sms_report, sms_report_field = None,
                                                                message_type = 'unknown_field_code', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), value)
@@ -327,29 +333,39 @@ def parse_only_one(sms_report, report, DEFAULT_LANGUAGE_ISO ):
 
 
 def parse_missing(sms_report, report, DEFAULT_LANGUAGE_ISO ):
-    field = SMSReportField.objects.filter(sms_report = sms_report, required = True)
+    field = SMSReportField.objects.filter(sms_report = sms_report, required = True).order_by('position_after_sms_keyword')
     gots = SMSReportField.objects.filter(sms_report = sms_report, key__in = report.keys())
+    onces = [] 
     for f in field:
         if f.key in report.keys():
             continue            
         else:
             if f.dependency == 'jam' and f.depends_on_value_of.key in report.keys():   continue
             elif gots.filter( position_after_sms_keyword = f.position_after_sms_keyword ).exists():   continue
-            else: 
+            elif f.position_after_sms_keyword in onces:   continue
+            else:
+                title = 'title_%s' %  DEFAULT_LANGUAGE_ISO
+                category = 'category_%s' %  DEFAULT_LANGUAGE_ISO 
                 report['error'] += '%s (%s), -' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
-                                           message_type = 'missing_sms_report_field', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), f.key)
-            
+                                           message_type = 'missing_sms_report_field', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), 
+                                                getattr(f, category) or  getattr(f, title))
+                onces.append(f.position_after_sms_keyword)#;print f.position_after_sms_keyword, onces
+    
     return True
     
 
     
 
-def get_error_msg(sms_report , sms_report_field , DEFAULT_LANGUAGE_ISO , message_type = 'unknown_error'):
+def get_error_msg(sms_report , sms_report_field , DEFAULT_LANGUAGE_ISO , message_type = 'unknown_error'): 
     response = SMSMessage.objects.filter(sms_report = sms_report, sms_report_field = sms_report_field, message_type = message_type)
     if response.exists():
         return getattr(response[0], 'message_%s' % DEFAULT_LANGUAGE_ISO)
     else:
-        if sms_report_field:    return ' %s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO), sms_report_field.key)
+        if sms_report_field:
+            title = 'title_%s' %  DEFAULT_LANGUAGE_ISO
+            category = 'category_%s' %  DEFAULT_LANGUAGE_ISO   
+            return ' %s (%s)' % (get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO),
+                                     getattr(sms_report_field, category) or  getattr(sms_report_field, title))
         return ' %s' % get_appropriate_response( DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO)
 
 def locate_object(object_inst, ref):
@@ -369,19 +385,21 @@ def import_sms_report(filepath = "rapidsmsrw1000/apps/api/messaging/smsreport.xl
     for row_index in range(sheet.nrows):
         if row_index < 1: continue   
         try:
-            title               = sheet.cell(row_index,0).value
-            keyword             = sheet.cell(row_index,1).value
-            description         = sheet.cell(row_index,2).value
-            field_separator     = sheet.cell(row_index,3).value
-            in_use              = sheet.cell(row_index,4).value
-            case_sensitive      = sheet.cell(row_index,5).value
-            syntax_regex        = sheet.cell(row_index,6).value
-            #created             = sheet.cell(row_index,7).value 
+            title_en            = sheet.cell(row_index,0).value
+            title_rw            = sheet.cell(row_index,1).value
+            keyword             = sheet.cell(row_index,2).value
+            description         = sheet.cell(row_index,3).value
+            field_separator     = sheet.cell(row_index,4).value
+            in_use              = sheet.cell(row_index,5).value
+            case_sensitive      = sheet.cell(row_index,6).value
+            syntax_regex        = sheet.cell(row_index,7).value
+            #created             = sheet.cell(row_index,8).value 
 
             #print title, keyword, description, field_separator, in_use , case_sensitive, syntax_regex, created
             sms_report, created = SMSReport.objects.get_or_create(keyword = keyword)
 
-            sms_report.title = title
+            sms_report.title_en = title_en
+            sms_report.title_rw = title_rw
             sms_report.description = description
             sms_report.field_separator = field_separator
             sms_report.in_use = in_use
@@ -392,7 +410,7 @@ def import_sms_report(filepath = "rapidsmsrw1000/apps/api/messaging/smsreport.xl
             sms_report.save()                   
             
             print "\ntitle : %s\n keyword : %s\n description : %s\n field_separator : %s\n in_use : %s\n case_sensitive: %s\n syntax_regex : %s\n \
-                    created: %s \n" % (sms_report.title, sms_report.keyword, sms_report.description, sms_report.field_separator, sms_report.in_use, 
+                    created: %s \n" % (sms_report.title_en, sms_report.keyword, sms_report.description, sms_report.field_separator, sms_report.in_use, 
                         sms_report.case_sensitive, sms_report.syntax_regex, sms_report.created)
             
         except Exception, e:
@@ -406,28 +424,32 @@ def import_sms_report_field(filepath = "rapidsmsrw1000/apps/api/messaging/smsrep
     for row_index in range(sheet.nrows):
         if row_index < 1: continue   
         try:
-            sms_report_keyword          = sheet.cell(row_index, 0).value 
-            prefix                      = sheet.cell(row_index, 1).value
-            key                         = sheet.cell(row_index, 2).value 
-            description                 = sheet.cell(row_index, 3).value 
-            type_of_value               = sheet.cell(row_index, 4).value 
-            upper_case                  = sheet.cell(row_index, 5).value 
-            lower_case                  = sheet.cell(row_index, 6).value 
-            try:    minimum_value               = int( sheet.cell(row_index, 7).value )
+            title_en                    = sheet.cell(row_index, 0).value
+            title_rw                    = sheet.cell(row_index, 1).value
+            category_en                 = sheet.cell(row_index, 2).value
+            category_rw                 = sheet.cell(row_index, 3).value
+            sms_report_keyword          = sheet.cell(row_index, 4).value 
+            prefix                      = sheet.cell(row_index, 5).value
+            key                         = sheet.cell(row_index, 6).value 
+            description                 = sheet.cell(row_index, 7).value 
+            type_of_value               = sheet.cell(row_index, 8).value 
+            upper_case                  = sheet.cell(row_index, 9).value 
+            lower_case                  = sheet.cell(row_index, 10).value 
+            try:    minimum_value               = int( sheet.cell(row_index, 11).value )
             except Exception, e: minimum_value = None
-            try:    maximum_value               = int( sheet.cell(row_index, 8).value )
+            try:    maximum_value               = int( sheet.cell(row_index, 12).value )
             except Exception, e: maximum_value = None
-            try:    minimum_length              = int( sheet.cell(row_index, 9).value )
+            try:    minimum_length              = int( sheet.cell(row_index, 13).value )
             except Exception, e: minimum_length = None
-            try:    maximum_length              = int( sheet.cell(row_index, 10).value )
+            try:    maximum_length              = int( sheet.cell(row_index, 14).value )
             except Exception, e: maximum_length = None 
-            try:    position_after_sms_keyword  = int( sheet.cell(row_index, 11).value )
+            try:    position_after_sms_keyword  = int( sheet.cell(row_index, 15).value )
             except Exception, e: position_after_sms_keyword = None 
-            depends_on_value_of         = sheet.cell(row_index, 12).value 
-            dependency                  = sheet.cell(row_index, 13).value 
-            allowed_value_list          = sheet.cell(row_index, 14).value 
-            only_allow_one              = sheet.cell(row_index, 15).value 
-            required                    = sheet.cell(row_index, 16).value 
+            depends_on_value_of         = sheet.cell(row_index, 16).value 
+            dependency                  = sheet.cell(row_index, 17).value 
+            allowed_value_list          = sheet.cell(row_index, 18).value 
+            only_allow_one              = sheet.cell(row_index, 19).value 
+            required                    = sheet.cell(row_index, 20).value 
             
             #print sms_report_keyword, prefix, key, description, type_of_value, upper_case, lower_case, minimum_value, maximum_value,\
             #        minimum_length, maximum_length, position_after_sms_keyword, depends_on_value_of, dependency, allowed_value_list, only_allow_one, required
@@ -437,6 +459,10 @@ def import_sms_report_field(filepath = "rapidsmsrw1000/apps/api/messaging/smsrep
             except Exception, e:    dep                  = None
             sms_report_field, created                    = SMSReportField.objects.get_or_create(key = key, sms_report = sms_report, 
                                                                                                     position_after_sms_keyword = position_after_sms_keyword)
+            sms_report_field.title_en                    = title_en
+            sms_report_field.title_rw                    = title_rw 
+            sms_report_field.category_en                 = category_en
+            sms_report_field.category_rw                 = category_rw            
             sms_report_field.prefix                      = prefix
             sms_report_field.description                 = description
             sms_report_field.type_of_value               = type_of_value
@@ -451,7 +477,7 @@ def import_sms_report_field(filepath = "rapidsmsrw1000/apps/api/messaging/smsrep
             sms_report_field.allowed_value_list          = allowed_value_list
             sms_report_field.only_allow_one              = only_allow_one
             sms_report_field.required                    = required
-            print sms_report_field, minimum_value, maximum_value, minimum_length, maximum_length, position_after_sms_keyword
+            #print sms_report_field, minimum_value, maximum_value, minimum_length, maximum_length, position_after_sms_keyword
             sms_report_field.save()                   
             
             print   sms_report_field.sms_report                  ,\
@@ -477,4 +503,44 @@ def import_sms_report_field(filepath = "rapidsmsrw1000/apps/api/messaging/smsrep
             print e, row_index
             pass
 
+def import_sms_message(filepath = "rapidsmsrw1000/apps/api/messaging/smsmessage.xls", sheetname = "smsmessage"):
+    book = open_workbook(filepath)
+    sheet = book.sheet_by_name(sheetname)
+    
+    for row_index in range(sheet.nrows):
+        if row_index < 1: continue   
+        try:
+            message_type                = sheet.cell(row_index, 0).value
+            sms_report_keyword          = sheet.cell(row_index, 1).value 
+            sms_report_field_key        = sheet.cell(row_index, 2).value
+            message_en                  = sheet.cell(row_index, 3).value 
+            message_rw                  = sheet.cell(row_index, 4).value 
+            
+            #print message_type, sms_report_keyword, sms_report_field_key, message_en, message_rw
+            
+            try:    sms_report                           = SMSReport.objects.get(keyword = sms_report_keyword)
+            except Exception, e:    sms_report           = None
+            try:    sms_report_field                     = SMSReportField.objects.get( key = sms_report_field_key, sms_report = sms_report)
+            except Exception, e:    sms_report_field     = None
+            
+            sms_message, created                         = SMSMessage.objects.get_or_create(message_type = message_type, sms_report = sms_report,
+                                                                                                 sms_report_field = sms_report_field)
+
+            sms_message.sms_report                       = sms_report
+            sms_message.sms_report_field                 = sms_report_field
+            sms_message.message_en                       = message_en
+            sms_message.message_rw                       = message_rw
+
+            
+            sms_message.save()                   
+            
+            print   sms_message.message_type                        ,\
+                    sms_message.sms_report                          ,\
+                    sms_message.sms_report_field                    ,\
+                    sms_message.message_en                          ,\
+                    sms_message.message_rw                          
+            
+        except Exception, e:
+            print e, row_index
+            pass
     

@@ -12,9 +12,9 @@ from .models import *
 
 class SMSReportAdmin(admin.ModelAdmin):                                                        
     list_filter = ()                                                        
-    exportable_fields = ('title', 'keyword', 'description', 'field_separator', 'in_use' , 'case_sensitive', 'syntax_regex', 'created', )                                                        
-    search_fields = ('title', 'keyword', 'description', 'field_separator', 'in_use' , 'case_sensitive', 'syntax_regex', 'created', )                                                        
-    list_display = ('title', 'keyword', 'description', 'field_separator', 'in_use' , 'case_sensitive', 'syntax_regex', 'created', )                                                    
+    exportable_fields = ( 'keyword', 'description', 'field_separator', 'in_use' , 'case_sensitive', 'syntax_regex', 'created', )                                                        
+    search_fields = ( 'keyword', 'description', 'field_separator', 'in_use' , 'case_sensitive', 'syntax_regex', 'created', )                                                        
+    list_display = ( 'keyword', 'description', 'field_separator', 'in_use' , 'case_sensitive', 'syntax_regex', 'created', )                                                    
     actions = (export_model_as_csv, export_model_as_excel)
     
 class SMSReportFieldAdmin(admin.ModelAdmin):                                                        
@@ -39,9 +39,9 @@ class SMSLanguageAdmin(admin.ModelAdmin):
     
 class SMSMessageAdmin(admin.ModelAdmin):                                                        
     list_filter = ('destination', 'message_type', 'sms_report', 'sms_report_field',)                                                        
-    exportable_fields = ('message_type', 'sms_report', 'sms_report_field', 'message_en', 'message_rw', 'created', )                                                        
-    search_fields = ('message_type', 'sms_report', 'sms_report_field', 'message_en', 'message_rw', 'created', )                                                                   
-    list_display = ('message_type', 'sms_report', 'sms_report_field', 'message_en', 'message_rw', 'created', )                                                               
+    exportable_fields = ('message_type', 'sms_report', 'sms_report_field', 'created', )                                                        
+    search_fields = ('message_type', 'sms_report', 'sms_report_field', 'created', )                                                                   
+    list_display = ('message_type', 'sms_report', 'sms_report_field', 'created', )                                                               
     actions = (export_model_as_csv, export_model_as_excel)     
 
 admin.site.register(SMSReport, SMSReportAdmin)
