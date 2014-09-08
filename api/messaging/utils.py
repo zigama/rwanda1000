@@ -11,6 +11,8 @@
 from rapidsms.contrib.handlers.handlers.keyword import KeywordHandler
 from .models import *
 from xlrd import open_workbook ,cellname,XL_CELL_NUMBER,XLRDError
+from rapidsmsrw1000.apps.api.utils import get_block_of_text_link, replace_block_of_text_link
+from rapidsmsrw1000.apps.api.locations.models import *
 
 def get_appropriate_response( DEFAULT_LANGUAGE_ISO = 'rw', message_type = 'unknown_error', sms_report = None, sms_report_field = None, destination = None ):
     try:
@@ -352,9 +354,61 @@ def parse_missing(sms_report, report, DEFAULT_LANGUAGE_ISO ):
                 onces.append(f.position_after_sms_keyword)#;print f.position_after_sms_keyword, onces
     
     return True
-    
 
-    
+def parse_db_constraint(sms_report, report, DEFAULT_LANGUAGE_ISO):
+    got = None
+    constraints = SMSDBConstraint.objects.filter( sms_report = sms_report )
+    if constraints.filter(constraint = 'unique').exists():
+        got = SMSReportTrack.objects.filter( nid = report['nid'] )
+        if got.exists():
+            period_start = constraints.get(constraint = 'unique')['minimum_period_value'] 
+            period_end =  constraints.get(constraint = 'unique')['maximum_period_value']
+            if period_start and period_end: got = got.filter( created__gte = period_start, created__lte = period_end )
+            tolerance = constraints.filter( constraint = 'tolerance' )            
+            if got.exists():
+                if tolerance.exists():
+                    tolerances = got.filter( keyword__in = tolerance.values_list('refer_sms_report__keyword'))
+                    if tolerances.exists():
+                        got1 = None
+                        for t in tolerance:
+                            got1 = tolerances.extra(where = ["%s = '%s'" % ( t.refer_sms_report_field.key , t.refer_sms_report_field.key )] )
+                            if got1.exists():
+                                return True
+                else:
+                    report['error'] += '%s , ' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
+                                           message_type = 'duplication', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO) )
+
+    if constraints.filter(constraint = 'stopper').exists():
+        got = SMSReportTrack.objects.filter( nid = report['nid'] )
+        if got.exists():
+            stopper = constraints.filter( constraint = 'stopper' )
+            if stopper.exists():
+                stoppers = got.filter( keyword__in = stopper.values_list('refer_sms_report__keyword'))
+                if stoppers.exists():
+                    got1 = None
+                    for s in stopper:
+                        got1 = stoppers.extra(where = ["%s = '%s'" % ( s.refer_sms_report_field.key , s.refer_sms_report_field.key )] )
+                        if got1.exists():
+                            report['error'] += '%s , ' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
+                                       message_type = 'expired_based_data', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO) )
+
+    if constraints.filter(constraint = 'base').exists():
+        got = SMSReportTrack.objects.filter( nid = report['nid'] )
+        if got.exists():
+            base = constraints.filter( constraint = 'base' )
+            if base.exists():
+                bases = got.filter( keyword__in = base.values_list('refer_sms_report__keyword'))
+                if bases.exists():
+                    got1 = None
+                    for b in base:
+                        got1 = bases.extra(where = ["%s = '%s'" % ( s.refer_sms_report_field.key , s.refer_sms_report_field.key )] )
+                        if got1.exists():
+                            return True
+                        else:
+                            report['error'] += '%s , ' % (get_error_msg(sms_report = sms_report, sms_report_field = None, 
+                                       message_type = 'missing_based_data', DEFAULT_LANGUAGE_ISO = DEFAULT_LANGUAGE_ISO) )
+                                
+    return True    
 
 def get_error_msg(sms_report , sms_report_field , DEFAULT_LANGUAGE_ISO , message_type = 'unknown_error'): 
     response = SMSMessage.objects.filter(sms_report = sms_report, sms_report_field = sms_report_field, message_type = message_type)
@@ -375,8 +429,192 @@ def locate_object(object_inst, ref):
                     getattr(ref, camel_to_underscore_lower(l.name))
                 )
     return object_inst
+
+def distinct_sms_report_fields():
+    """ 
+        mysql backend does not support distinct
+    """
+   
+    fs_keys = SMSReportField.objects.all().values_list('key').distinct()
+    ans = [ SMSReportField.objects.filter(key__in = f)[0].id for f in fs_keys ]
+    fs = SMSReportField.objects.filter( pk__in  = ans ) 
+    
+    return fs.order_by('key')
+
+
+def get_field_name(f):
+    f_key = getattr(f, 'key')
+    f_key = "%s_key" % f_key
+    return f_key
+
+def get_model_object(app_label, model_name):
+    app = get_app(app_label)
+    m = get_models(app)
+    for m1 in m:
+        if m1.__name__ == model_name:
+            return m1
+    return None
+
+def propagate_db(model_object):
+
+    try:
+        
+        try: 
+            obj = model_object()
+            table = obj._meta.db_table
+            cursor = connection.cursor()
+            cursor.execute("drop table %s" % table)
+            cursor.close()
+        except Exception, e:
+            pass
+            
+        return_code = subprocess.call("cd %s && ./manage.py syncdb" % os.getcwd(), shell=True)  
+    except Exception,e:
+        return False
+        
+    return True
     
 
+def create_or_update_model(app_label = 'messaging', model_name = 'Test', model_fields = [], filters = [], custom = [],
+                                         links = [], locations = [], default_return = 'raw_sms'):
+    """
+        Field in the form of {key, type_of_value, length(min, max), required, value(min,max)} 
+        locations are all Location Types already defined        
+    """
+
+    try:
+        tab = add_four_space()
+        status = False
+        start_text = "##Start of %s" % model_name
+        end_text = "##End of %s" % model_name
+
+        start_fields_text = "##Start of %s Fields" % model_name
+        end_fields_text = "##End of %s Fields" % model_name
+
+        start_meta_text = "##Start of %s Meta" % model_name
+        end_meta_text = "##End of %s Meta" % model_name
+
+        start_methods_text = "##Start of %s Methods" % model_name
+        end_methods_text =  "##End of %s Methods" % model_name
+        
+        locs_data = "".join("\n%s%s = models.ForeignKey(%s, null = True, blank = True)" % (tab, camel_to_underscore_lower(l), camelCase(l)) for l in locations)
+        links_data = "".join("\n%s%s = models.ForeignKey(%s, null = True, blank = True)" % (tab, camel_to_underscore_lower(l), camelCase(l)) for l in links)
+        custom_data = "".join("%s" % c['data'] for c in custom)
+        ans = []
+        for f in model_fields:
+            min_lf = getattr(f, 'minimum_length')
+            max_lf = getattr(f, 'maximum_length')
+            min_vf = getattr(f, 'minimum_value')
+            max_vf = getattr(f, 'maximum_value')
+            type_of_vf = getattr(f, 'type_of_value')
+            required_f = getattr(f, 'required')
+            
+            if  type_of_vf == 'integer':
+                
+                vf = "\n%s%s = models.IntegerField(validators = [MinValueValidator(%d), MaxValueValidator(%d)], null = %s,  blank = %s)" % (tab,
+                                                                                 get_field_name(f), min_vf, max_vf, required_f, required_f)
+                
+            elif  type_of_vf == 'float':
+                
+                vf = "\n%s%s = models.IntegerField(validators = [MinValueValidator(%d), MaxValueValidator(%d)], null = %s,  blank = %s)" % (tab,
+                                                                                 get_field_name(f), min_vf, max_vf, required_f, required_f)
+                
+            elif type_of_vf == 'string':
+                
+                vf = "\n%s%s = models.CharField(max_length = %d , validators = [MinLengthValidator(%d)], null = %s,  blank = %s)" % (tab, 
+                                                    get_field_name(f), max_lf, min_lf, required_f, required_f)
+                
+            elif type_of_vf == 'string_digit':
+                
+                vf = "\n%s%s = models.CharField(max_length = %d , validators = [MinLengthValidator(%d)], null = %s,  blank = %s)" % (tab,
+                                                                         get_field_name(f), max_lf, min_lf, required_f, required_f)
+                              
+            elif type_of_vf == 'date':
+                
+                vf = "\n%s%s = models.DateField(validators = [MinValueValidator(%d), MaxValueValidator(%d)], null = %s,  blank = %s)" % (tab, 
+                                                                            get_field_name(f), min_vf, max_vf, required_f, required_f)
+                
+            else:
+                vf = "\n%s%s = models.TextField(validators = [MinLengthValidator(%d), MaxLengthValidator(%d)], null = %s,  blank = %s)" % (tab,
+                                                                         get_field_name(f), min_lf, max_lf, required_f, required_f)
+            ans.append(vf)
+            
+               
+        default_value = "\n\n%sdef __unicode__(self):\n%s%sreturn self.%s" % (tab, tab, tab, default_return)
+        meta_value = "\n\n%sclass Meta:\n%s%spermissions = (\n%s%s%s('can_view', 'Can view'),\n%s%s)" % (tab, tab, tab, tab, tab, tab, tab, tab )
+        admin_locs = "".join("'%s', "  % camel_to_underscore_lower(l) for l in locations )
+        admin_links = "".join("'%s', "  % camel_to_underscore_lower(l) for l in links )
+        admin_fields = "".join("'%s', "  % get_field_name(f).lower() for f in model_fields )
+        filter_fields = "".join("'%s', "  % f for f in filters )
+        variables_data = "".join("%s" % an for an in ans)
+        
+        admin_value = "\n%s\nclass %sAdmin(admin.ModelAdmin):\
+                                                        \n%slist_filter = (%s )\
+                                                        \n%sexportable_fields = (%s %s )\
+                                                        \n%ssearch_fields = (%s %s )\
+                                                        \n%slist_display = (%s %s )\
+                                                    \n%sactions = (export_model_as_csv, export_model_as_excel)\
+                        \n\nadmin.site.register(%s, %sAdmin)\n%s\n" \
+                        % (start_text, model_name, 
+                           tab, filter_fields,
+                           tab, filter_fields, admin_fields,
+                           tab, filter_fields, admin_fields, 
+                           tab, filter_fields, admin_fields,
+                           tab,
+                           model_name, model_name, end_text)
+        admin_rep = "\nclass %sAdmin(admin.ModelAdmin):\
+                                                        \n%slist_filter = (%s )\
+                                                        \n%sexportable_fields = (%s %s )\
+                                                        \n%ssearch_fields = (%s %s )\
+                                                        \n%slist_display = (%s %s )\
+                                                    \n%sactions = (export_model_as_csv, export_model_as_excel)\
+                        \n\nadmin.site.register(%s, %sAdmin)\n" \
+                        % (model_name, 
+                           tab, filter_fields, 
+                           tab, filter_fields, admin_fields,
+                           tab, filter_fields, admin_fields,
+                           tab, filter_fields, admin_fields,
+                           tab,
+                           model_name, model_name)
+        data = "\n%s\nclass %s(models.Model):\n%s%s%s%s%s\n%s\n" \
+                    % (start_text, model_name, custom_data, variables_data, locs_data, default_value, meta_value, end_text)
+        data_rep = "\nclass %s(models.Model):\n%s%s%s%s%s\n" \
+                    % (model_name, custom_data, variables_data, locs_data, default_value, meta_value)
+
+                
+        ##CHEK IF MODEL NOT DEFINED ALREADY
+        m_filename = '%s/%s/models.py' % (API_PATH, app_label)
+        m_f = get_block_of_text_link(m_filename, model_name, start_text,  end_text)
+        
+        if m_f:
+            #print "THERE 1"
+            if m_f['lines'] and m_f['start'] and m_f['end']:
+                x = replace_block_of_text_link(m_filename, m_f['lines'], m_f['start'], m_f['end'], replace_with = data_rep)
+                #print x 
+            else:
+                with open(m_filename, "a") as f:
+                    f.write(data)
+                    f.close()
+        
+        ##CHEK IF MODEL IN ADMIN NOT DEFINED ALREADY
+        a_filename = '%s/%s/admin.py' % (API_PATH, app_label)
+        a_f = get_block_of_text_link(a_filename, model_name, start_text,  end_text)
+        if a_f:
+            if a_f['lines'] and a_f['start'] and a_f['end']:
+                y = replace_block_of_text_link(a_filename, a_f['lines'], a_f['start'], a_f['end'], replace_with = admin_rep) 
+                #print y
+            else:
+                with open(a_filename, "a") as f:
+                    f.write(admin_value)
+                    f.close()
+
+        status = propagate_db(get_model_object(app_label, model_name))
+                                   
+        return status
+
+    except Exception, e:
+        #print e
+        return False
 
 def import_sms_report(filepath = "rapidsmsrw1000/apps/api/messaging/smsreport.xls", sheetname = "smsreport"):
     book = open_workbook(filepath)

@@ -32,7 +32,7 @@ def create_or_update_sms_report_model(filename = "%s/models.py" % THIS_PATH, sms
         tab = add_four_space()
         status = False
         model_name = "%sTable" % camelCase(sms_report.keyword)
-
+        print "OK"
         start_text = "##Start of %s" % model_name
         end_text = "##End of %s" % model_name
 
@@ -44,7 +44,7 @@ def create_or_update_sms_report_model(filename = "%s/models.py" % THIS_PATH, sms
 
         start_methods_text = "##Start of %s Methods" % model_name
         end_methods_text =  "##End of %s Methods" % model_name
-
+        
         locs_data = "".join("\n%s%s = models.ForeignKey(%s, null = True, blank = True)" % (tab, camel_to_underscore_lower(l), camelCase(l)) for l in locations)
         links_data = "".join("\n%s%s = models.ForeignKey(%s, null = True, blank = True)" % (tab, camel_to_underscore_lower(l), camelCase(l)) for l in links)
         variables_data = ""
@@ -79,7 +79,7 @@ def create_or_update_sms_report_model(filename = "%s/models.py" % THIS_PATH, sms
                                                          )" % (tab, get_field_name(f), min_lf, max_lf, required_f, required_f) 
                 variables_data = variables_data.join(vf)
         
-        variables_data = variables_data.join("\n%sraw_sms = models.TextField()" % (tab)        
+        variables_data = variables_data.join("\n%sraw_sms = models.TextField()" % (tab))        
         default_value = "\n\n%sdef __unicode__(self):\n%s%sreturn self.%s" % (tab, tab, tab, default_return)
         meta_value = "\n\n%sclass Meta:\n%s%spermissions = (\n%s%s%s('can_view', 'Can view'),\n%s%s)" % (tab, tab, tab, tab, tab, tab, tab, tab )
         admin_locs = "".join("'%s', "  % camel_to_underscore_lower(l) for l in locations )

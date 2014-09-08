@@ -9,7 +9,7 @@
 
 
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator, MaxLengthValidator
 from django.core.exceptions import ValidationError
 from rapidsmsrw1000.apps.api.utils import *
 from django.contrib.auth.models import Group
@@ -224,7 +224,10 @@ class SMSMessage(models.Model):
                             ('is_required', 'This SMS Report Field Is Mandatory'),
                             ('sender_not_registered', 'Sender Not Registered'),
                             ('unknown_error', 'Unknown Error'),
-                            ('help', 'Help Text'),                            
+                            ('help', 'Help Text'),
+                            ('duplication', 'Duplication'),
+                            ('missing_base_data', 'Missing Base Data'),
+                            ('expired_based_data', 'Expired Base Data'),                            
                             
                           )
     
@@ -252,13 +255,166 @@ class SMSMessage(models.Model):
         return "%s-%s" % (self.get_message_type_display(), self.description)   
     
 ##End of SMSMessage
-
-##Start of SMSReportTrack
 ##all report_keys ; all_distinct_report_fields; all_locations_type; all_message_types; reporter; created
+##Start of SMSReportTrack
 
+class SMSReportTrack(models.Model):
+
+    keyword = models.CharField(max_length=30)
+    raw_sms = models.TextField()
+    aa_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    af_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    al_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    anc2_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    anc2_date_key = models.DateField(validators = [MinValueValidator(-270), MaxValueValidator(270)], null = True,  blank = True)
+    anc3_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    anc4_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    anc_date_key = models.DateField(validators = [MinValueValidator(-270), MaxValueValidator(270)], null = True,  blank = True)
+    ap_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    at_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    bf1_key = models.CharField(max_length = 3 , validators = [MinLengthValidator(3)], null = True,  blank = True)
+    bo_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    cbf_key = models.CharField(max_length = 3 , validators = [MinLengthValidator(3)], null = True,  blank = True)
+    cd_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    ch_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    child_height_key = models.IntegerField(validators = [MinValueValidator(1), MaxValueValidator(150)], null = True,  blank = True)
+    child_number_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    child_weight_key = models.IntegerField(validators = [MinValueValidator(1), MaxValueValidator(10)], null = True,  blank = True)
+    ci_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    cl_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    cm_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    co_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    cs_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    cw_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    date_of_birth_key = models.DateField(validators = [MinValueValidator(-1000), MaxValueValidator(0)], null = True,  blank = True)
+    date_of_emergency_key = models.DateField(validators = [MinValueValidator(-270), MaxValueValidator(0)], null = True,  blank = True)
+    db_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    di_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    ds_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    ebf_key = models.CharField(max_length = 3 , validators = [MinLengthValidator(3)], null = True,  blank = True)
+    fe_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    fp_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    gi_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    gravidity_key = models.IntegerField(validators = [MinValueValidator(1), MaxValueValidator(30)], null = True,  blank = True)
+    gs_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    hd_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    he_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    ho_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    hp_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    hw_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    hy_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    ib_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    ja_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    kx_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    la_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    lmp_key = models.DateField(validators = [MinValueValidator(-270), MaxValueValidator(0)], null = True,  blank = True)
+    lz_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    ma_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    mc_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    md_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    mother_height_key = models.IntegerField(validators = [MinValueValidator(50), MaxValueValidator(250)], null = True,  blank = True)
+    mother_phone_key = models.CharField(max_length = 13 , validators = [MinLengthValidator(10)], null = False,  blank = False)
+    mother_weight_key = models.IntegerField(validators = [MinValueValidator(25), MaxValueValidator(150)], null = True,  blank = True)
+    ms_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    mu_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    muac_key = models.IntegerField(validators = [MinValueValidator(1), MaxValueValidator(15)], null = True,  blank = True)
+    mw_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    na_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    nb_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    nbc1_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    nbc2_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    nbc3_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    nbc4_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    nbc5_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    nd_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    nh_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    nid_key = models.CharField(max_length = 16 , validators = [MinLengthValidator(16)], null = True,  blank = True)
+    np_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    nr_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    ns_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    nt_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    nv_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    oe_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    oi_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    ol_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    or_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    pa_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    parity_key = models.IntegerField(validators = [MinValueValidator(0), MaxValueValidator(30)], null = True,  blank = True)
+    pc_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    pm_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    pnc1_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    pnc2_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    pnc3_key = models.CharField(max_length = 4 , validators = [MinLengthValidator(4)], null = True,  blank = True)
+    pr_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    ps_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    pt_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    rb_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    rm_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    sa_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    sb_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    sc_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    sl_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    to_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    tr_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    un_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    v1_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    v2_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    v3_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    v4_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    v5_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    v6_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    vc_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    vi_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = True,  blank = True)
+    vo_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    yg_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+    yj_key = models.CharField(max_length = 2 , validators = [MinLengthValidator(2)], null = False,  blank = False)
+
+    def __unicode__(self):
+        return self.raw_sms
+
+    class Meta:
+        permissions = (
+            ('can_view', 'Can view'),
+        )
 ##End of SMSReportTrack
 
+##Start of SMSDBConstraint
+class SMSDBConstraint(models.Model):
+    """
+    Before storing the incoming report, appropriately, you may need some constraint against the DB
+    This Model is there for only that reason    
+    """
 
+    CONSTRAINT_CHOICES = (
+
+        ('unique','Unique'),
+        ('base','Base/Requirer'),
+        ('tolerance','Tolerance'),
+        ('stopper','Expirer/Stopper'),
+        
+    )
+
+
+    sms_report =  models.ForeignKey(SMSReport, related_name = 'sr', blank = True, null = True)
+    sms_report_field = models.ForeignKey(SMSReportField, related_name = 'srf', blank = True, null = True)
+    constraint = models.CharField(max_length=100, choices = CONSTRAINT_CHOICES,
+                                      help_text="Constraint Definition")
+    refer_sms_report =  models.ForeignKey(SMSReport, related_name = 'refer_sr', blank = True, null = True)
+    refer_sms_report_field = models.ForeignKey(SMSReportField, related_name = 'refer_srf', blank = True, null = True)
+    minimum_period_value = models.FloatField(blank = True, null=True, 
+                                      help_text="What is the minimum period value?")
+    maximum_period_value = models.FloatField(blank = True, null=True, 
+                                      help_text="What is the maximum period value?")
+    created = models.DateTimeField(auto_now_add=True)
+
+    unique_together = (("constraint", "sms_report", "sms_report_field")) 
+    
+    def __unicode__(self):
+        return "%s-%s-%s" % (self.get_constraint_display(), self.sms_report, self.sms_report_field)   
+    
+##End of SMSDBConstraint
+    
+    
 def ensure_new_language(sender, **kwargs):
     if kwargs.get('created', False):
         language = kwargs.get('instance')

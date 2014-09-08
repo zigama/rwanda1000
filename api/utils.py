@@ -146,14 +146,16 @@ def get_block_of_text_link(filename, model_name, start,  end):
     
     return {'lines': lines, 'start': start_index, 'end': end_index}
 
-def update_block_of_text_link(filename, lines, start, end, update_with = ""):
+def replace_block_of_text_link(filename, lines, start, end, replace_with = ""):
     block_of_data = ""
-    input_data = open(filename, "w")
+    input_data = open(filename, "w")#; print start, end, replace_with                
     for i, line in enumerate(lines):
-        input_data.write(line)
-        if i == end - 1:
-            #print end
-            input_data.write( update_with )
+        if start < i < end:
+            block_of_data = block_of_data + line
+            if i == end - 1: 
+                input_data.write(replace_with)
+        else:
+            input_data.write(line)
                 
     input_data.close()
     
